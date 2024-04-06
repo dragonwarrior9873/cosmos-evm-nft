@@ -1,0 +1,14 @@
+
+#root {
+  display: flex;
+  justify-content: center;
+}
+
+body {
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+    background-color: #0A0A0B10;
+    color: #6D758D;
+}

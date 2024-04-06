@@ -1,0 +1,69 @@
+.MintButton {
+  background-color: #6D758D;
+  color: #F0F7FF;
+  padding: 0px 24px;
+  height: 43px;
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .1s ease-in-out;
+
+  &:hover {
+    background-color: #6D758DCC;
+  }
+
+  outline:none;
+  border:none;
+
+  &:active {
+    outline: none;
+    border: none;
+    background-color: #6D758D80;
+  }
+}
+
+.Loading {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  margin: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  font-size: 28px;
+  color: #A8ABB4;
+}
+
+
+.SendButton {
+  background-color: #6D758D;
+  color: #F0F7FF;
+  padding: 0px 24px;
+  height: 43px;
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .1s ease-in-out;
+
+  &:hover {
+    background-color: #6D758DCC;
+  }
+
+  outline:none;
+  border:none;
+
+  &:active {
+    outline: none;
+    border: none;
+    background-color: #6D758D80;
+  }
+}

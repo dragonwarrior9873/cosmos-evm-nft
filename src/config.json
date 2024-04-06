@@ -1,0 +1,9 @@
+{
+  "name": "Secret NFT",
+  "rpc": "https://api.pulsar.scrttestnet.com",
+  "restUrl": "https://rest.atlantic-2.seinetwork.io",
+  "network": "pulsar-3",
+  "contract_address": "secret12ujlrxl8ycx88xel8cstdjdcm6t8p5wttuzk5j",
+  "code_hash": "773c39a4b75d87c4d04b6cfe16d32cd5136271447e231b342f7467177c363ca8",
+  "code_id": 5293
+}

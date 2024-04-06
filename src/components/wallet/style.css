@@ -1,0 +1,68 @@
+.DropdownItem {
+    padding: 10px 20px;
+    font-size: 14px;
+    display: flex;
+    min-width: 150px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+
+    &>svg {
+        margin-right: 10px;
+    }
+
+    border-radius: 0px;
+
+    &:hover {
+        background: #3337421F;
+    }
+
+    &:active {
+        background: #3337422F;
+    }
+}
+
+.wallet {
+    background-color: #6D758D;
+    padding:0px 16px;
+    height:43px;
+    border-radius:8px;
+    font-size:14px;
+    display:flex;
+    align-items:center;
+    cursor:pointer;
+
+    &:hover {
+        background-color: #6D758DEE
+    }
+}
+
+.wBalance {
+    padding:5px 16px;
+    background-color: #1A2B37;
+    border-radius:8px;
+    margin-right:16px;
+    font-size:12px;
+    color: white;
+}
+
+.wAddress {
+    color:#111111;
+    font-weight:500;
+}
+
+.DropdownButtonContent {
+    background: #6D758D;
+    color: #F0F0F0;
+    position: absolute;
+    right: 0;
+    z-index: 1;
+    border-radius: 8px;
+    backdrop-filter: blur(0px);
+    display:none;
+    box-shadow: 0 0 3px #0A0A0B;
+    overflow:hidden;
+    width: fit-content;
+    margin-top: 10px;
+    z-index: 2;
+}
