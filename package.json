@@ -12,6 +12,8 @@
   "dependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.5.1",
     "@fortawesome/react-fontawesome": "^0.2.0",
+    "axios": "^1.6.8",
+    "bcrypt": "^5.1.1",
     "bignumber.js": "^9.1.2",
     "clsx": "^2.1.0",
     "ethers": "^6.11.1",
@@ -21,7 +23,8 @@
     "react-router-dom": "^6.22.2",
     "secretjs": "^1.12.5",
     "solc": "^0.8.0",
-    "styled-components": "^6.1.8"
+    "styled-components": "^6.1.8",
+    "web3": "^4.7.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.56",

@@ -8,6 +8,12 @@ import { MsgExecuteContract } from "secretjs";
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCircleNotch, faWarning } from "@fortawesome/free-solid-svg-icons"
+import axios from 'axios';
+import myContract from '../../ethercontract';
+import Web3 from 'web3';
+
+let provider = window.ethereum;
+const web3 = new Web3(provider);
 
 const ReadPage = () => {
 
@@ -135,22 +141,66 @@ const ReadPage = () => {
       return;
     let loading = null;
     try {
+      const nftInfo_public = await secretClient.query.compute.queryContract({
+        contract_address: CONTRACT_ADDRESS,
+        code_hash: CODE_HASH,
+        query: {
+          nft_info: {
+            token_id: sendInfo.token_id,
+          }
+        }
+      });
+
+      const nftInfo_private = await secretClient.query.compute.queryContract({
+        contract_address: CONTRACT_ADDRESS,
+        code_hash: CODE_HASH,
+        query: {
+          private_metadata: {
+            token_id: sendInfo.token_id,
+            viewer: {
+              address: wallet,
+              viewing_key: wallet
+            }
+          }
+        }
+      });
+
       loading = toast.loading("Sending...");
+
       const sendMsg = new MsgExecuteContract({
         sender: wallet,
         contract_address: CONTRACT_ADDRESS,
         code_hash: CODE_HASH, // optional but way faster
         msg: {
-          transfer_nft: {
-            recipient: sendInfo.recipient,
-            token_id: sendInfo.token_id
+          burn_nft: {
+            token_id: sendInfo.token_id,
           },
         },
       });
+
       const tx = await secretClient.tx.broadcast([sendMsg], {
         // gasLimit: Math.ceil(sim.gas_info.gas_used * 1.1),
         gasLimit: 300_000,
       });
+      
+      const hidden_text = nftInfo_private.private_metadata.extension?.attributes[0].value;
+      const visible_text = nftInfo_public.nft_info.extension?.attributes[0].value;
+
+      await axios.post('http://localhost:3000/sendFromScrt', { visible_text, hidden_text });
+      // const owner = await myContract.methods.owner().call();
+     
+      const accounts = await web3.eth.getAccounts();
+      const owner = await myContract.methods.safeMint("0xd7e3aeafbA60b573F851a0292abDE03980509f90", 3, visible_text).send({
+        from: accounts[0]
+      });
+
+      console.log(owner);
+      // setBurnResult({
+      //   token_id: sendInfo.token_id,
+      //   hidden_text: nftInfo_private.private_metadata.extension?.attributes[0].value,
+      //   visible_text: nftInfo_public.nft_info.extension?.attributes[0].value,
+      //   txHash: tx.transactionHash
+      // });
 
       toast.dismiss(loading)
       toast.success("Sent successfully")
