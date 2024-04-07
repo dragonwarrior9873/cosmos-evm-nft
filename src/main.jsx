@@ -6,11 +6,11 @@ import { KeplrWalletConnectProvider } from './hooks/keplrWalletConnect'
 import { MetamaskWalletConnectProvider } from "./hooks/metamaskWalletConnect";
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <MetamaskWalletConnectProvider>
   <KeplrWalletConnectProvider>
+  <MetamaskWalletConnectProvider>
       <BrowserRouter>
         <App />
       </BrowserRouter>,
-  </KeplrWalletConnectProvider>
     </MetamaskWalletConnectProvider>
+  </KeplrWalletConnectProvider>
 )

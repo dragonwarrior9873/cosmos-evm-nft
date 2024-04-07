@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { CODE_HASH, CONTRACT_ADDRESS, PRIVATE_METADATA, PUBLIC_METADATA } from "../../env";
 import './style.css';
 import { useKeplrWalletConnect } from "../../hooks/keplrWalletConnect";
-// import { useMetamaskWalletConnect } from "../../hooks/metamaskWalletConnect";
+import { useMetamaskWalletConnect } from "../../hooks/metamaskWalletConnect";
 import toast from "react-hot-toast";
 import { MsgExecuteContract } from "secretjs";
 import { useEffect, useState } from "react";
@@ -15,13 +15,13 @@ import Web3 from 'web3';
 let provider = window.ethereum;
 const web3 = new Web3(provider);
 const accounts = await web3.eth.getAccounts();
-let tokenId = 1;
+let tokenId = 4;
 
 const ReadPage = () => {
 
   const [loading, setLoading] = useState(false)
   const { secretClient, wallet } = useKeplrWalletConnect();
-  // const { secretClient, wallet } = useMetamaskWalletConnect();
+  const { ethereumClient, metamaskWallet } = useMetamaskWalletConnect();
   const [nftList, setNftList] = useState([]);
   const [ether_nfts, setEtherNftList] = useState([]);
   const [burnResult, setBurnResult] = useState(null);
@@ -63,6 +63,16 @@ const ReadPage = () => {
       } else {
         setNftList([]);
       }
+    } catch (e) {
+      toast.error(e.message);
+      console.log('error >>>', e);
+    }
+    setLoading(false);
+  }
+
+  const getOwnedEthereumNFTs = async () => {
+    setLoading(true);
+    try {
       const totalNFTs = await myContract.methods.balanceOf(accounts[0]).call();
       console.log(totalNFTs);
       const parsedTotalNFTs = Number(totalNFTs);
@@ -95,56 +105,83 @@ const ReadPage = () => {
   useEffect(() => {
     if (wallet && secretClient) {
       getOwnedNFTs();
-    } else {
-      setNftList([]);
+      if( !metamaskWallet ){
+        setEtherNftList([]);
+      }
+    } else if(metamaskWallet && ethereumClient){
+      getOwnedEthereumNFTs();
+      if( !wallet ){
+        setNftList([]);
+      }
     }
-  }, [wallet, secretClient]);
+    else {
+      setNftList([]);
+      setEtherNftList([]);
+    }
+  }, [wallet, secretClient, metamaskWallet, ethereumClient]);
 
-  const onClickReadAndDestroy = async (token_id, visibleText) => {
+  const onClickReadAndDestroy = async (token_id, visibleText, isEvm, hiddentext = "") => {
     let loading = null;
     try {
-      const nftInfo = await secretClient.query.compute.queryContract({
-        contract_address: CONTRACT_ADDRESS,
-        code_hash: CODE_HASH,
-        query: {
-          private_metadata: {
-            token_id: token_id,
-            viewer: {
-              address: wallet,
-              viewing_key: wallet
+      if( isEvm == false){
+        const nftInfo = await secretClient.query.compute.queryContract({
+          contract_address: CONTRACT_ADDRESS,
+          code_hash: CODE_HASH,
+          query: {
+            private_metadata: {
+              token_id: token_id,
+              viewer: {
+                address: wallet,
+                viewing_key: wallet
+              }
             }
           }
-        }
-      });
-      loading = toast.loading("Burning...");
-      const burnMsg = new MsgExecuteContract({
-        sender: wallet,
-        contract_address: CONTRACT_ADDRESS,
-        code_hash: CODE_HASH, // optional but way faster
-        msg: {
-          burn_nft: {
-            token_id: token_id
+        });
+        loading = toast.loading("Burning...");
+        const burnMsg = new MsgExecuteContract({
+          sender: wallet,
+          contract_address: CONTRACT_ADDRESS,
+          code_hash: CODE_HASH, // optional but way faster
+          msg: {
+            burn_nft: {
+              token_id: token_id
+            },
           },
-        },
-      });
-      const tx = await secretClient.tx.broadcast([burnMsg], {
-        // gasLimit: Math.ceil(sim.gas_info.gas_used * 1.1),
-        gasLimit: 300_000,
-      });
-
-      toast.dismiss(loading)
-      toast.success("Burned successfully")
-
-      console.log('tx >>> ', tx);
-      setBurnResult({
-        token_id: token_id,
-        hidden_text: nftInfo.private_metadata.extension?.attributes[0].value,
-        visible_text: visibleText,
-        txHash: tx.transactionHash
-      });
-      let cloneList = JSON.parse(JSON.stringify(nftList));
-      cloneList = cloneList.filter((nft) => nft.token_id != token_id);
-      setNftList(cloneList);
+        });
+        const tx = await secretClient.tx.broadcast([burnMsg], {
+          // gasLimit: Math.ceil(sim.gas_info.gas_used * 1.1),
+          gasLimit: 300_000,
+        });
+  
+        toast.dismiss(loading)
+        toast.success("Burned successfully")
+  
+        console.log('tx >>> ', tx);
+        setBurnResult({
+          token_id: token_id,
+          hidden_text: nftInfo.private_metadata.extension?.attributes[0].value,
+          visible_text: visibleText,
+          txHash: tx.transactionHash
+        });
+        let cloneList = JSON.parse(JSON.stringify(nftList));
+        cloneList = cloneList.filter((nft) => nft.token_id != token_id);
+        setNftList(cloneList);
+      }
+      else {
+        toast.dismiss(loading)
+        const result = await myContract.methods.burn(token_id).send({
+          from: accounts[0]
+        });
+        toast.success("Burned successfully")
+        setBurnResult({
+          token_id: token_id,
+          hidden_text: hiddentext,
+          visible_text: visibleText
+        });
+        let cloneList = JSON.parse(JSON.stringify(ether_nfts));
+        cloneList = cloneList.filter((nft) => nft.token_id != token_id);
+        setEtherNftList(cloneList);
+      }
     } catch (e) {
       if (loading)
         toast.dismiss(loading)
@@ -216,7 +253,9 @@ const ReadPage = () => {
     let loading = null;
     try {
       loading = toast.loading("Converting...");
-      await myContract.methods.burn(sendInfo.token_id).call();
+      const result = await myContract.methods.burn(sendInfo.token_id).send({
+        from: accounts[0]
+      });
 
       let privateMetadata = PRIVATE_METADATA;
       let publicMetadata = PUBLIC_METADATA;
@@ -251,6 +290,7 @@ const ReadPage = () => {
       console.log('tx >>> ', tx);
       let cloneList = JSON.parse(JSON.stringify(ether_nfts));
       cloneList = cloneList.filter((nft) => nft.token_id != sendInfo.token_id);
+      getOwnedNFTs();
       setEtherNftList(cloneList);
       setSendInfo(null);
     } catch (e) {
@@ -262,6 +302,7 @@ const ReadPage = () => {
   }
 
   const onClickConvertNFT = async () => {
+    tokenId ++;
     if (sendInfo == null)
       return;
     let loading = null;
@@ -322,8 +363,6 @@ const ReadPage = () => {
       const owner = await myContract.methods.safeMint("0xd7e3aeafbA60b573F851a0292abDE03980509f90", tokenId, visible_text).send({
         from: accounts[0]
       });
-
-      tokenId ++;
   
       // setBurnResult({
       //   token_id: sendInfo.token_id,
@@ -338,6 +377,7 @@ const ReadPage = () => {
       console.log('tx >>> ', tx);
       let cloneList = JSON.parse(JSON.stringify(nftList));
       cloneList = cloneList.filter((nft) => nft.token_id != sendInfo.token_id);
+      getOwnedEthereumNFTs();
       setNftList(cloneList);
       setSendInfo(null);
     } catch (e) {
@@ -357,14 +397,14 @@ const ReadPage = () => {
   const getNftItem = (nft) => {
     return (
       <div className="flex flex-col gap-1 justify-center w-full mx-auto">
-        <p className="text-xl font-semibold text-left">{`ID: ${nft.token_id}`}</p>
+        <p className="text-xl font-semibold text-left">{`ID: ${nft.token_id}`} &nbsp; SCRT</p>
         <div className="flex items-center flex-row w-fit ml-5">
           <p className="text-xl font-semibold">Visible Text: &nbsp;</p>
           <p className="text-xl font-semibold">{`${nft.visibleText}`}</p>
         </div>
         <div className="flex items-center flex-row w-fit ml-5">
           <p className="text-xl font-semibold">Hidden Text: &nbsp;</p>
-          <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickReadAndDestroy(nft.token_id, nft.visibleText)}>Read & Destroy NFT</p>
+          <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickReadAndDestroy(nft.token_id, nft.visibleText, false)}>Read & Destroy NFT</p>
         </div>
         <div className="flex items-center flex-row w-fit ml-5 gap-2">
           {/* <input className="color-primary text-lg p-1 min-w-96 border-solid border-primary border-2 rounded-md text-black" value={sendAddress} onChange={(e) => setSendAddress(e.target.value)}></input> */}
@@ -379,14 +419,14 @@ const ReadPage = () => {
   const getEtherNftItem = (nft) => {
     return (
       <div className="flex flex-col gap-1 justify-center w-full mx-auto">
-        <p className="text-xl font-semibold text-left">{`ID: ${nft.token_id}`}</p>
+        <p className="text-xl font-semibold text-left">{`ID: ${nft.token_id}`} &nbsp; BNB</p>
         <div className="flex items-center flex-row w-fit ml-5">
           <p className="text-xl font-semibold">Visible Text: &nbsp;</p>
           <p className="text-xl font-semibold">{`${nft.token_uri}`}</p>
         </div>
         <div className="flex items-center flex-row w-fit ml-5">
           <p className="text-xl font-semibold">Hidden Text: &nbsp;</p>
-          <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickReadAndDestroy(nft.token_id, nft.token_uri)}>Read & Destroy NFT</p>
+          <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickReadAndDestroy(nft.token_id, nft.token_uri, true, nft.hidden_text)}>Read & Destroy NFT</p>
         </div>
         <div className="flex items-center flex-row w-fit ml-5 gap-2">
           {/* <input className="color-primary text-lg p-1 min-w-96 border-solid border-primary border-2 rounded-md text-black" value={sendAddress} onChange={(e) => setSendAddress(e.target.value)}></input> */}
@@ -406,7 +446,10 @@ const ReadPage = () => {
           <Link to={`https://testnet.ping.pub/secret/account/${CONTRACT_ADDRESS}`} target={'_blank'} className="text-xl font-semibold underline">{CONTRACT_ADDRESS}</Link>
 
           {(wallet == null || secretClient == null) && (
-            <p className="text-4xl font-semibold mt-40">Please connect wallet</p>
+            <p className="text-4xl font-semibold mt-40">Please connect Keplr wallet</p>
+          )}
+           {(metamaskWallet == null || ethereumClient == null) && (
+            <p className="text-4xl font-semibold mt-40">Please connect Metamask wallet</p>
           )}
           {loading && (
             <div className="Loading"><FontAwesomeIcon icon={faCircleNotch} spin /></div>
@@ -425,9 +468,6 @@ const ReadPage = () => {
           <p className="text-2xl font-semibold">Contract</p>
           <Link to={`https://testnet.ping.pub/secret/account/${CONTRACT_ADDRESS}`} target={'_blank'} className="text-xl font-semibold underline">{CONTRACT_ADDRESS}</Link>
 
-          {(wallet == null || secretClient == null) && (
-            <p className="text-4xl font-semibold mt-40">Please connect wallet</p>
-          )}
           {(sendInfo.type !== null && sendInfo.type == "send") && (
             <div className="flex flex-col mt-3 gap-1">
               <p className="text-lg">Recipient Address:</p>
