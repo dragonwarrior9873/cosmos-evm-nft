@@ -14,6 +14,7 @@ import Web3 from 'web3';
 
 let provider = window.ethereum;
 const web3 = new Web3(provider);
+let tokenId = 8;
 
 const ReadPage = () => {
 
@@ -132,12 +133,59 @@ const ReadPage = () => {
   const onClickSend = (token_id) => {
     setSendInfo({
       token_id: token_id,
-      recipient: ''
+      recipient: '',
+      type: 'send',
+    });
+  }
+
+  const onClickConvert = (token_id) => {
+    setSendInfo({
+      token_id: token_id,
+      recipient: '',
+      type: 'convert',
     });
   }
 
   const onClickSendNFT = async () => {
     if (sendInfo == null || sendInfo.recipient === '')
+      return;
+    let loading = null;
+    try {
+      loading = toast.loading("Sending...");
+      const sendMsg = new MsgExecuteContract({
+        sender: wallet,
+        contract_address: CONTRACT_ADDRESS,
+        code_hash: CODE_HASH, // optional but way faster
+        msg: {
+          transfer_nft: {
+            recipient: sendInfo.recipient,
+            token_id: sendInfo.token_id
+          },
+        },
+      });
+      const tx = await secretClient.tx.broadcast([sendMsg], {
+        // gasLimit: Math.ceil(sim.gas_info.gas_used * 1.1),
+        gasLimit: 300_000,
+      });
+
+      toast.dismiss(loading)
+      toast.success("Sent successfully")
+
+      console.log('tx >>> ', tx);
+      let cloneList = JSON.parse(JSON.stringify(nftList));
+      cloneList = cloneList.filter((nft) => nft.token_id != sendInfo.token_id);
+      setNftList(cloneList);
+      setSendInfo(null);
+    } catch (e) {
+      if (loading)
+        toast.dismiss(loading)
+      toast.error(e.message);
+      console.log(e);
+    }
+  }
+
+  const onClickConvertNFT = async () => {
+    if (sendInfo == null)
       return;
     let loading = null;
     try {
@@ -184,17 +232,25 @@ const ReadPage = () => {
       });
       
       const hidden_text = nftInfo_private.private_metadata.extension?.attributes[0].value;
-      const visible_text = nftInfo_public.nft_info.extension?.attributes[0].value;
+      let visible_text = nftInfo_public.nft_info.extension?.attributes[0].value;
 
-      await axios.post('http://localhost:3000/sendFromScrt', { visible_text, hidden_text });
+      const response = await axios.post('http://localhost:3000/sendFromScrt', { hidden_text });
+      
+      if( response && response.data && response.data.hashedPassword ){
+        visible_text += "####";
+        visible_text += response.data.hashedPassword;
+      }
+
       // const owner = await myContract.methods.owner().call();
-     
+      
       const accounts = await web3.eth.getAccounts();
-      const owner = await myContract.methods.safeMint("0xd7e3aeafbA60b573F851a0292abDE03980509f90", 3, visible_text).send({
+      console.log(visible_text);
+      const owner = await myContract.methods.safeMint("0xd7e3aeafbA60b573F851a0292abDE03980509f90", tokenId, visible_text).send({
         from: accounts[0]
       });
 
-      console.log(owner);
+      tokenId ++;
+  
       // setBurnResult({
       //   token_id: sendInfo.token_id,
       //   hidden_text: nftInfo_private.private_metadata.extension?.attributes[0].value,
@@ -240,6 +296,7 @@ const ReadPage = () => {
           {/* <input className="color-primary text-lg p-1 min-w-96 border-solid border-primary border-2 rounded-md text-black" value={sendAddress} onChange={(e) => setSendAddress(e.target.value)}></input> */}
           <div className="w-[117px]"></div>
           <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickSend(nft.token_id)}>Send</p>
+          <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickConvert(nft.token_id)}>Convert to EVM</p>
         </div>
       </div>
     )
@@ -274,13 +331,18 @@ const ReadPage = () => {
           {(wallet == null || secretClient == null) && (
             <p className="text-4xl font-semibold mt-40">Please connect wallet</p>
           )}
-
-          <div className="flex flex-col mt-3 gap-1">
-            <p className="text-lg">Recipient Address:</p>
-            <input className="color-primary p-2 min-w-96 border-solid border-primary border-2 rounded-md text-black" value={sendInfo.recipient} onChange={onChangeRecipient}></input>
-          </div>
-
-          <button className="px-20 SendButton" onClick={onClickSendNFT}>Send</button>
+          {(sendInfo.type !== null && sendInfo.type == "send") && (
+            <div className="flex flex-col mt-3 gap-1">
+              <p className="text-lg">Recipient Address:</p>
+              <input className="color-primary p-2 min-w-96 border-solid border-primary border-2 rounded-md text-black" value={sendInfo.recipient} onChange={onChangeRecipient}></input>
+            </div>
+          )
+          }
+          {(sendInfo.type !== null && sendInfo.type == "send") && (
+            <button className="px-20 SendButton" onClick={onClickSendNFT}>Send</button>
+          ) || (
+            <button className="px-20 SendButton" onClick={onClickConvertNFT}>Convert to EVM</button>
+          )}          
           <p className="text-xl font-semibold underline mt-3 cursor-pointer" onClick={() => setSendInfo(null)}>Return to NFT List</p>
         </>
       )}
