@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { CODE_HASH, CONTRACT_ADDRESS } from "../../env";
+import { CODE_HASH, CONTRACT_ADDRESS, PRIVATE_METADATA, PUBLIC_METADATA } from "../../env";
 import './style.css';
 import { useKeplrWalletConnect } from "../../hooks/keplrWalletConnect";
 // import { useMetamaskWalletConnect } from "../../hooks/metamaskWalletConnect";
@@ -14,7 +14,8 @@ import Web3 from 'web3';
 
 let provider = window.ethereum;
 const web3 = new Web3(provider);
-let tokenId = 8;
+const accounts = await web3.eth.getAccounts();
+let tokenId = 1;
 
 const ReadPage = () => {
 
@@ -22,6 +23,7 @@ const ReadPage = () => {
   const { secretClient, wallet } = useKeplrWalletConnect();
   // const { secretClient, wallet } = useMetamaskWalletConnect();
   const [nftList, setNftList] = useState([]);
+  const [ether_nfts, setEtherNftList] = useState([]);
   const [burnResult, setBurnResult] = useState(null);
   const [sendInfo, setSendInfo] = useState(null);
 
@@ -61,7 +63,28 @@ const ReadPage = () => {
       } else {
         setNftList([]);
       }
+      const totalNFTs = await myContract.methods.balanceOf(accounts[0]).call();
+      console.log(totalNFTs);
+      const parsedTotalNFTs = Number(totalNFTs);
+      
+      let i = 0 , temp_toke_id = 0, temp_token_uri, visible_text = "";
+      const ether_nfts = [];
+      while (i < parsedTotalNFTs) {
+        temp_toke_id = await myContract.methods.tokenOfOwnerByIndex(accounts[0], i).call();
+        temp_token_uri = await myContract.methods.tokenURI(temp_toke_id).call();
+        visible_text =  temp_token_uri.split("####")[0];  
+        temp_token_uri =  temp_token_uri.split("####")[1];
 
+        const response = await axios.post('http://localhost:3000/sendFromEvm', { temp_token_uri });      
+        if( response && response.data && response.data.decryptedText ){
+          temp_token_uri = response.data.decryptedText;
+        }
+
+        ether_nfts.push({"token_id" : Number(temp_toke_id), "token_uri" : visible_text, "hidden_text" : temp_token_uri});
+        i += 1;
+      }
+      console.log(ether_nfts);
+      setEtherNftList(ether_nfts);
     } catch (e) {
       toast.error(e.message);
       console.log('error >>>', e);
@@ -138,11 +161,14 @@ const ReadPage = () => {
     });
   }
 
-  const onClickConvert = (token_id) => {
+  const onClickConvert = (token_id, isEvm, visible_text = "", hidden_text = "") => {
     setSendInfo({
       token_id: token_id,
       recipient: '',
       type: 'convert',
+      isEvm: isEvm,
+      visible_text: visible_text,
+      hidden_text: hidden_text,
     });
   }
 
@@ -183,12 +209,64 @@ const ReadPage = () => {
       console.log(e);
     }
   }
+  
+  const onClickConvertNFTToSecret = async () => {
+    if (sendInfo == null)
+      return;
+    let loading = null;
+    try {
+      loading = toast.loading("Converting...");
+      await myContract.methods.burn(sendInfo.token_id).call();
+
+      let privateMetadata = PRIVATE_METADATA;
+      let publicMetadata = PUBLIC_METADATA;
+
+      privateMetadata.extension.attributes[0].value = sendInfo.hidden_text;
+      publicMetadata.extension.attributes[0].value = sendInfo.visible_text;
+
+      const mintMsg = new MsgExecuteContract({
+        sender: wallet,
+        contract_address: CONTRACT_ADDRESS,
+        code_hash: CODE_HASH, // optional but way faster
+        msg: {
+          mint_nft: {
+            owner: wallet,
+            public_metadata: publicMetadata,
+            private_metadata: privateMetadata,
+          },
+        },
+      });
+
+      const tx = await secretClient.tx.broadcast([mintMsg], {
+        // gasLimit: Math.ceil(sim.gas_info.gas_used * 1.1),
+        gasLimit: 300_000,
+      });
+      toast.dismiss(loading)
+      if (tx.code == 0) {
+        toast.success("Converted successfully")
+      } else {
+        toast.error("Converted failed")
+      }
+      
+      console.log('tx >>> ', tx);
+      let cloneList = JSON.parse(JSON.stringify(ether_nfts));
+      cloneList = cloneList.filter((nft) => nft.token_id != sendInfo.token_id);
+      setEtherNftList(cloneList);
+      setSendInfo(null);
+    } catch (e) {
+      if (loading)
+        toast.dismiss(loading)
+      toast.error(e.message);
+      console.log(e);
+    }
+  }
 
   const onClickConvertNFT = async () => {
     if (sendInfo == null)
       return;
     let loading = null;
     try {
+      loading = toast.loading("Converting...");
       const nftInfo_public = await secretClient.query.compute.queryContract({
         contract_address: CONTRACT_ADDRESS,
         code_hash: CODE_HASH,
@@ -213,8 +291,6 @@ const ReadPage = () => {
         }
       });
 
-      loading = toast.loading("Sending...");
-
       const sendMsg = new MsgExecuteContract({
         sender: wallet,
         contract_address: CONTRACT_ADDRESS,
@@ -236,14 +312,12 @@ const ReadPage = () => {
 
       const response = await axios.post('http://localhost:3000/sendFromScrt', { hidden_text });
       
-      if( response && response.data && response.data.hashedPassword ){
+      if( response && response.data && response.data.encrpytedText ){
         visible_text += "####";
-        visible_text += response.data.hashedPassword;
+        visible_text += response.data.encrpytedText;
       }
 
       // const owner = await myContract.methods.owner().call();
-      
-      const accounts = await web3.eth.getAccounts();
       console.log(visible_text);
       const owner = await myContract.methods.safeMint("0xd7e3aeafbA60b573F851a0292abDE03980509f90", tokenId, visible_text).send({
         from: accounts[0]
@@ -296,7 +370,29 @@ const ReadPage = () => {
           {/* <input className="color-primary text-lg p-1 min-w-96 border-solid border-primary border-2 rounded-md text-black" value={sendAddress} onChange={(e) => setSendAddress(e.target.value)}></input> */}
           <div className="w-[117px]"></div>
           <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickSend(nft.token_id)}>Send</p>
-          <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickConvert(nft.token_id)}>Convert to EVM</p>
+          <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickConvert(nft.token_id, true)}>Convert to EVM</p>
+        </div>
+      </div>
+    )
+  }
+
+  const getEtherNftItem = (nft) => {
+    return (
+      <div className="flex flex-col gap-1 justify-center w-full mx-auto">
+        <p className="text-xl font-semibold text-left">{`ID: ${nft.token_id}`}</p>
+        <div className="flex items-center flex-row w-fit ml-5">
+          <p className="text-xl font-semibold">Visible Text: &nbsp;</p>
+          <p className="text-xl font-semibold">{`${nft.token_uri}`}</p>
+        </div>
+        <div className="flex items-center flex-row w-fit ml-5">
+          <p className="text-xl font-semibold">Hidden Text: &nbsp;</p>
+          <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickReadAndDestroy(nft.token_id, nft.token_uri)}>Read & Destroy NFT</p>
+        </div>
+        <div className="flex items-center flex-row w-fit ml-5 gap-2">
+          {/* <input className="color-primary text-lg p-1 min-w-96 border-solid border-primary border-2 rounded-md text-black" value={sendAddress} onChange={(e) => setSendAddress(e.target.value)}></input> */}
+          <div className="w-[117px]"></div>
+          <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickSend(nft.token_id)}>Send</p>
+          <p className="text-xl font-semibold underline cursor-pointer" onClick={() => onClickConvert(nft.token_id, false, nft.token_uri, nft.hidden_text)}>Convert to Secret</p>
         </div>
       </div>
     )
@@ -318,6 +414,7 @@ const ReadPage = () => {
           {!loading && (
             <div className="flex flex-col gap-6 min-w-1/3">
               {nftList && nftList.length > 0 && nftList.map(getNftItem)}
+              {ether_nfts && ether_nfts.length > 0 && ether_nfts.map(getEtherNftItem)}
             </div>
           )}
         </>
@@ -340,9 +437,12 @@ const ReadPage = () => {
           }
           {(sendInfo.type !== null && sendInfo.type == "send") && (
             <button className="px-20 SendButton" onClick={onClickSendNFT}>Send</button>
-          ) || (
+          ) || ((sendInfo.isEvm !== null && sendInfo.isEvm == true) && ( 
             <button className="px-20 SendButton" onClick={onClickConvertNFT}>Convert to EVM</button>
-          )}          
+          ) || ( 
+            <button className="px-20 SendButton" onClick={onClickConvertNFTToSecret}>Convert to Secret</button>
+          ))
+          }          
           <p className="text-xl font-semibold underline mt-3 cursor-pointer" onClick={() => setSendInfo(null)}>Return to NFT List</p>
         </>
       )}

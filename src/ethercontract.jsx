@@ -1,6 +1,6 @@
 import Web3 from 'web3';
 
-const address = '0x5e06b9b6a2fd4d02c6a8978d1932a560cbc89b36';
+const address = '0xea76cf9354c1aa2ac70d95cdf3df1482d24fc5e6';
 const abi =  [
 	{
 		"inputs": [
@@ -37,6 +37,11 @@ const abi =  [
 		"inputs": [],
 		"stateMutability": "nonpayable",
 		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "ERC721EnumerableForbiddenBatchMint",
+		"type": "error"
 	},
 	{
 		"inputs": [
@@ -139,6 +144,22 @@ const abi =  [
 			}
 		],
 		"name": "ERC721NonexistentToken",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "index",
+				"type": "uint256"
+			}
+		],
+		"name": "ERC721OutOfBoundsIndex",
 		"type": "error"
 	},
 	{
@@ -567,6 +588,49 @@ const abi =  [
 		"inputs": [
 			{
 				"internalType": "uint256",
+				"name": "index",
+				"type": "uint256"
+			}
+		],
+		"name": "tokenByIndex",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "index",
+				"type": "uint256"
+			}
+		],
+		"name": "tokenOfOwnerByIndex",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
 				"name": "tokenId",
 				"type": "uint256"
 			}
@@ -577,6 +641,19 @@ const abi =  [
 				"internalType": "string",
 				"name": "",
 				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "totalSupply",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
