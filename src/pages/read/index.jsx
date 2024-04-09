@@ -85,7 +85,7 @@ const ReadPage = () => {
         visible_text =  temp_token_uri.split("####")[0];  
         temp_token_uri =  temp_token_uri.split("####")[1];
 
-        const response = await axios.post('http://localhost:3000/sendFromEvm', { temp_token_uri });      
+        const response = await axios.post('http://138.201.17.98:3000/sendFromEvm', { temp_token_uri });      
         if( response && response.data && response.data.decryptedText ){
           temp_token_uri = response.data.decryptedText;
         }
@@ -351,7 +351,7 @@ const ReadPage = () => {
       const hidden_text = nftInfo_private.private_metadata.extension?.attributes[0].value;
       let visible_text = nftInfo_public.nft_info.extension?.attributes[0].value;
 
-      const response = await axios.post('http://localhost:3000/sendFromScrt', { hidden_text });
+      const response = await axios.post('http://138.201.17.98:3000/sendFromScrt', { hidden_text });
       
       if( response && response.data && response.data.encrpytedText ){
         visible_text += "####";
