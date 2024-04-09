@@ -33,7 +33,8 @@ const DropdownButton = (props) => {
     <div ref={dropdownRef} onClick={openDropdown} className="relative">
       <div className="wallet">
         <div className="wBalance">{props.balance}</div>
-        <div className="wAddress">{shortenAddress(props.address)}</div>
+        {/* <div className="wAddress">{shortenAddress(props.address)}</div> */}
+        <div className="wAddress">{props.address}</div>
       </div>
       <div className={clsx("DropdownButtonContent", dropdownOpen ? 'block' : 'hidden')} onClick={() => setDropdownOpen(false)}>
         {props.children}

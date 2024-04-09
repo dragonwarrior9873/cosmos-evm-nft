@@ -79,7 +79,7 @@ const NavBar = () => {
         <Link to="/" className={clsx(isPathExactMatch('/') ? "font-bold" : "font-medium", 'text-primary')}>Mint</Link>
         <Link to="/read" className={clsx(isPathExactMatch('/read') ? "font-bold" : "font-medium", 'text-primary')}>Read</Link>
       </div>
-      <div className="relative right-0 flex items-center justify-end w-1/3 gap-6">
+      <div className="relative right-0 flex flex-col justify-end w-1/3 gap-6">
         {wallet == null && (
           <button className="WalletConnectButton" onClick={openWalletConnect}>Connect Keplr Wallet</button>
         )}
