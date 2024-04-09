@@ -10,12 +10,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCircleNotch, faWarning } from "@fortawesome/free-solid-svg-icons"
 import axios from 'axios';
 import myContract from '../../ethercontract';
-import Web3 from 'web3';
+import Web3 from 'web3';  
 
 let provider = window.ethereum;
 const web3 = new Web3(provider);
 const accounts = await web3.eth.getAccounts();
-let tokenId = 4;
+let tokenId = 9;
 
 const ReadPage = () => {
 
